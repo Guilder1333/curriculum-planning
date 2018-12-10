@@ -1,0 +1,37 @@
+.register_form_required {
+    color: red;
+}
+
+.register_form {
+    display: flex;
+    flex-direction: column;
+}
+
+.register_form_entry {
+    display: flex;
+    flex-direction: row;
+}
+
+.register_form_entry.register_form_set_password {
+    flex-wrap: wrap;
+}
+
+.register_form_set_password_hint {
+    flex: 1 1 100%;
+    font-size: 10pt;
+    color: gray;
+}
+
+.register_form label {
+    display: flex;
+    width: 300px;
+}
+
+.register_form_use_password {
+    display: flex;
+    flex-direction: column;
+}
+
+.register_form_button {
+    align-self: center;
+}

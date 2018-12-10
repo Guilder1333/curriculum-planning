@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test</title>
+    <link rel="stylesheet" type="text/css" href="/static/register.css">
+</head>
+<body>
+    <h1>Регистрация учителя</h1>
+    <p>
+        Пожалуйста укажите свои данные, как учителя. После окнчания регистрации на вашу почту придет письмо со ссылкой для подтверждения регистрации.
+        В дальнейшем E-mail будет использоваться как логин и для восстановления пароля.
+    </p>
+    <div class="register_form">
+        <div class="register_form_entry register_form_mail">
+            <label for="email_input">E-Mail<span class="register_form_required">*</span></label>
+            <input id="email_input" type="text">
+        </div>
+        <div class="register_form_entry register_form_name">
+            <label for="name_input">Имя<span class="register_form_required">*</span></label>
+            <input id="name_input" type="text">
+        </div>
+        <div class="register_form_entry register_form_second_name">
+            <label for="second_name_input">Фамилия<span class="register_form_required">*</span></label>
+            <input id="second_name_input" type="text">
+        </div>
+        <div class="register_form_entry register_form_set_password">
+            <label for="register_form_password_checkbox">Использовать одноразовый пароль</label>
+            <input id="register_form_password_checkbox" type="checkbox" checked="checked">
+            <div class="register_form_set_password_hint">
+                Для логина каждый раз будет использоваться одноразовый пароль присылаемый на почту.
+                Вам не потребуется запоминать пароль, он будет каждый раз высылаться вам на почту, которая была указана при регистрации.
+            </div>
+        </div>
+        <div class="register_form_use_password" style="display: none;">
+            <div class="register_form_entry register_form_password1">
+                <label for="password_input">Пароль<span class="register_form_required">*</span></label>
+                <input id="password_input" type="text">
+            </div>
+            <div class="register_form_entry register_form_entry register_form_password2">
+                <label for="password_confirm_input">Подтверждение пароля<span class="register_form_required">*</span></label>
+                <input id="password_confirm_input" type="text">
+            </div>
+        </div>
+
+        <button class="register_form_button" id="register">
+            Зарегистрироваться
+        </button>
+    </div>
+</body>
+</html>
