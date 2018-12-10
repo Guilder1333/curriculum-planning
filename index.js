@@ -3,7 +3,7 @@ const validator = require("email-validator");
 const express = require("express");
 const path = require("path");
 const bodyParser = require('body-parser');
-const {account} = require("./mail-account");
+const {mailParams} = require("./mail-account");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -13,19 +13,18 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // parse application/json
 app.use(bodyParser.json());
 
-app.use('/static', express.static(path.join(__dirname, "public")));
-app.use('/register', express.static(path.join(__dirname, "register")));
+app.use('/', express.static(path.join(__dirname, "public")));
 
 app.post('/api/register', (req, res) => {
   if (validator.validate(req.body.email)) {
     res.redirect('/register');
     let transporter = nodemailer.createTransport({
-      host: 'smtp.mail.ru',
-      port: 465,
-      secure: true,
+      host: mailParams.host,
+      port: mailParams.port,
+      secure: mailParams.secure,
       auth: {
-        user: account.user,
-        pass: account.pass
+        user: mailParams.user,
+        pass: mailParams.pass
       }
     });
 

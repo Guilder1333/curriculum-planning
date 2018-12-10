@@ -1,6 +1,9 @@
 module.exports = {
-  account: {
+  mailParams: {
     user: '',
-    pass: ''
+    pass: '',
+    host: 'smtp.mail.ru',
+    port: 465,
+    secure: true
   }
 };
