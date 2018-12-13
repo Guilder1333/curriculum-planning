@@ -43,20 +43,20 @@
     color: #fff;
 }
 
-.login_form--input_block {
+.input_block {
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 30px;
 }
 
-.login_form--caption {
+.input_block--caption {
     white-space: nowrap;
     margin-right: 30px;
     color: #808080;
 }
 
-input.login_form--input {
+input.input_block--input {
     font-size: 15px;
     color: #555555;
     line-height: 1.2;
@@ -70,7 +70,7 @@ input.login_form--input {
     height: 45px;
 }
 
-input.login_form--input:focus {
+input.input_block--input:focus {
     outline: none;
     border-color: #57b846;
 }

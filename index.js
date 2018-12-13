@@ -13,7 +13,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // parse application/json
 app.use(bodyParser.json());
 
-app.use('/', express.static(path.join(__dirname, "public")));
+app.use('/', express.static(path.join(__dirname, "dist")));
 
 app.post('/api/register', (req, res) => {
   if (validator.validate(req.body.email)) {
