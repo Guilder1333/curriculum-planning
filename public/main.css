@@ -77,9 +77,9 @@ input.input_block--input:focus {
 
 body,html {
     background: #f0f0f0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    /*display: flex;*/
+    /*align-items: center;*/
+    /*justify-content: center;*/
     height: 100%;
     width: 100%;
 }
@@ -133,3 +133,60 @@ button:hover {
     background-color: #57b846;
 }
 
+#modal-root {
+    overflow: visible;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+}
+
+.window {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+}
+
+.switcher {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+}
+
+.switch-case {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+}
+
+.switcher .transition {
+    position: absolute;
+    width: 200%;
+    height: 100%;
+    left: -100%;
+    transition: left;
+    transition-duration: 0.5s;
+    transform-style: flat;
+}
+
+.switcher .transition.start {
+    left: 0;
+}
+
+.switcher .transition .switch-case {
+    width: 50%;
+}
+
+.switcher .transition .switch-case:first-child {
+    left: 0;
+}
+
+.switcher .transition .switch-case:last-child {
+    left: 50%;
+}

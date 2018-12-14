@@ -6,13 +6,34 @@ export default class ContentSwitcher extends React.Component {
     super(props);
 
     this.child = null;
-    this.state = {keyValue: props.initialKey};
+    this.transitionKey = null;
+    this.renderedKey = null;
+    this.state = {keyValue: props.initialKey, transition: props.transition ? "transition" : null};
+    this.transitionEndHandler = this.transitionEndHandler.bind(this);
+  }
+
+  transitionEndHandler() {
+    this.child = this.transitionKey;
+    this.transitionKey = null;
+    this.setState({
+      transition: "transition"
+    });
   }
 
   set key(value) {
     this.setState({
       keyValue: value
     });
+  }
+
+  componentDidUpdate() {
+    if (this.transitionKey !== this.state.keyValue) {
+      if (this.state.transition === "transition") {
+        this.setState({
+          transition: "transition start"
+        });
+      }
+    }
   }
 
   render() {
@@ -26,12 +47,17 @@ export default class ContentSwitcher extends React.Component {
       }
     }
 
-    if (this.props.transition) {
-      setInterval(() => {}, this.props.transition);
+    if (this.state.transition && this.transitionKey !== key) {
+      this.transitionKey = key;
+    }
+
+    if (this.child != null && child !== null && this.transitionKey === key && this.state.transition) {
       return (
-        <div className="switcher transition">
-          {child}
-          {this.child}
+        <div className="switcher">
+          <div className={this.state.transition} onTransitionEnd={this.transitionEndHandler}>
+            {child}
+            {this.child}
+          </div>
         </div>
       );
     }
@@ -42,5 +68,31 @@ export default class ContentSwitcher extends React.Component {
         {child}
       </div>
     )
+  }
+}
+
+export class SwitchCase extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {style: ""};
+  }
+
+  get switchKey() {
+    return this.props.switchKey;
+  }
+
+  set style(value) {
+    this.setState({
+      style: value
+    });
+  }
+
+  render() {
+    return (
+      <div className="switch-case">
+        {this.props.children}
+      </div>
+    );
   }
 }
