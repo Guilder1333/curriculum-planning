@@ -15,7 +15,7 @@ export default class CaptionInput extends React.Component {
    * @returns {string|boolean}
    */
   get value() {
-    return this.inputRef.value;
+    return this.inputRef.current.value;
   }
 
   render() {

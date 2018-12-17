@@ -1,3 +1,5 @@
+const CopyWebpackPlugin = require('copy-webpack-plugin')
+
 module.exports = {
   entry: './src/main.js',
   module: {
@@ -13,5 +15,10 @@ module.exports = {
         }
       }
     ]
-  }
+  },
+  plugins: [
+    new CopyWebpackPlugin([
+      { from: './public/', to: './' },
+    ], { ignore: ['*.js', '*.scss', '*.sass'] })
+  ]
 };

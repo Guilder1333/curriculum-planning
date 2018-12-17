@@ -22,17 +22,24 @@
   "homepage": "https://github.com/Guilder1333/curriculum-planning#readme",
   "dependencies": {
     "body-parser": "^1.18.3",
+    "cookie-parser": "^1.4.3",
     "email-validator": "^2.0.4",
     "express": "^4.16.4",
+    "md5": "^2.2.1",
     "nodemailer": "^4.7.0",
+    "pg": "^7.7.1",
+    "random-string": "^0.2.0",
     "react": "^16.6.3",
-    "react-dom": "^16.6.3"
+    "react-dom": "^16.6.3",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "@babel/core": "^7.2.0",
     "@babel/preset-env": "^7.2.0",
     "@babel/preset-react": "^7.0.0",
+    "axios": "^0.18.0",
     "babel-loader": "^8.0.4",
+    "copy-webpack-plugin": "^4.6.0",
     "webpack": "^4.27.1",
     "webpack-cli": "^3.1.2"
   }
