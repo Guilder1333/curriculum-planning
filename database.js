@@ -36,8 +36,8 @@ class DataBaseClient {
           }
         }
         return this.client.query("CREATE SCHEMA IF NOT EXISTS users_schema")
-          .then(() => this.client.query("CREATE TABLE IF NOT EXISTS users_schema.login_info (id integer primary key, verify_guid char(36), user_id integer unique, delete_user boolean, last_login timestamp with time zone)"))
-          .then(() => this.client.query("CREATE TABLE IF NOT EXISTS users_schema.user (id integer primary key, email varchar(255) unique, password varchar(32), random_password boolean, teacher boolean)"));
+          .then(() => this.client.query("CREATE TABLE IF NOT EXISTS users_schema.login_info (id serial primary key, verify_guid char(36), user_id integer unique, delete_user boolean, last_login timestamp with time zone)"))
+          .then(() => this.client.query("CREATE TABLE IF NOT EXISTS users_schema.user (id serial primary key, email varchar(255) unique, password varchar(32), random_password boolean, teacher boolean)"));
       });
   }
 
@@ -92,6 +92,25 @@ class DataBaseClient {
             userId: record[1]
           };
         }
+        const password = md5(salt + randomString({length: 12, special: true}));
+        return this.client.query("INSERT INTO users_schema.user (email, password, random_password) VALUES ($1, $2, $3) RETURNING id", [email, password, true])
+          .then((res) => {
+            if (res.rowCount !== 1) {
+              throw new Error("Failed to create user, something went wrong.");
+            }
+            const id = res.rows[0].id;
+            return this.client.query("INSERT INTO users_schema.login_info (verify_guid, user_id, delete_user, last_login) VALUES ($1, $2, $3, $4) RETURNING id, user_id", [guid, id, true, new Date()]);
+          })
+          .then((res) => {
+            if (res.rowCount !== 1) {
+              throw new Error("Failed to create login info, something went wrong.");
+            }
+            return {
+              password: password,
+              loginId: res.rows[0].id,
+              userId: res.rows[0].user_id
+            }
+          });
       })
   }
 }
