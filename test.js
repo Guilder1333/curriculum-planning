@@ -1,5 +1,11 @@
+const crypto = require("crypto");
 
-new Promise(function (resolve, reject) {
+let array = new Int32Array(1);
+crypto.randomFillSync(array, 0, 1);
+console.log(array[0]);
+
+const loginFailedError = 0x100001;
+/*new Promise(function (resolve, reject) {
   setTimeout(function () {
     console.log("chain 0");
     resolve('foo');
@@ -21,12 +27,13 @@ new Promise(function (resolve, reject) {
     console.log("chain error");
     return new Promise((resolve, reject) => {
       setTimeout(function () {
-        reject(new Error("failed"));
+        reject(loginFailedError);
       }, 300);
     });
   })
-  .then(() => {
+  .then((res) => {
     console.log("not happening");
+    return res;
   })
   .catch(async (err) => {
     await new Promise((resolve, reject) => {
@@ -37,5 +44,8 @@ new Promise(function (resolve, reject) {
     }).then((res) => {
       console.log(res);
     });
+    console.log(err === loginFailedError);
     console.error(err);
-  });
+  })
+  .finally((res) => console.log(res))
+  .then((res) => console.log(res));*/

@@ -2,9 +2,8 @@ const { Client } = require("pg");
 const uuidv4 = require("uuid/v4");
 const md5 = require("md5");
 const randomString = require("random-string");
-const dataBaseName = 'studyplan';
-
-const salt = "C%W<mIMjXAY+I>{";
+const crypto = require("crypto");
+const { databaseParams, loginFailedError, duplicateUserRegistrationError, registrationFailedError } = require("./params.js");
 
 /*
 login process:
@@ -15,11 +14,11 @@ login process:
 
 class DataBaseClient {
   constructor() {
-    const url = process.env.DATABASE_URL || "postgres://postgres:root@localhost:5432/studyplan";
+    const url = process.env.DATABASE_URL || databaseParams.connectionString;
     console.log(url);
     this.client = new Client({
       connectionString: url,
-      ssl: false
+      ssl: databaseParams.ssl
     });
   }
 
@@ -29,89 +28,121 @@ class DataBaseClient {
       .then((res) => {
         if (res.rowCount > 0) {
           for (let i = 0; i < res.rowCount; i++) {
-            if (res.rows[i].table_name === "login_info") {
+            if (res.rows[i].table_name === "user_list") {
               // ok, tables are here
               return;
             }
           }
         }
         return this.client.query("CREATE SCHEMA IF NOT EXISTS users_schema")
-          .then(() => this.client.query("CREATE TABLE IF NOT EXISTS users_schema.login_info (id serial primary key, verify_guid char(36), user_id integer unique, delete_user boolean, last_login timestamp with time zone)"))
-          .then(() => this.client.query("CREATE TABLE IF NOT EXISTS users_schema.user (id serial primary key, email varchar(255) unique, password varchar(32), random_password boolean, teacher boolean)"));
+          .then(() => this.client.query("CREATE TABLE IF NOT EXISTS users_schema.user_list (id serial primary key, email varchar(255) unique, password varchar(32), random_password boolean, teacher boolean, full_name varchar(255), group_name varchar(255), login_id int, verify_guid char(36), last_login timestamp with time zone)"));
       });
   }
 
   checkLoginInfo(id, uid) {
-    this.client.connect()
-      .then(() => this.client.query("BEGIN"))
-      .then(() => this.client.query({
-        text: "SELECT verifyGuid FROM users_schema.login_info WHERE id = $1", //  FOR UPDATE OF users_schema.login_info
-        values: [parseInt(id) || -1],
-        rowMode: "array"
-      }))
+    return this.client.connect()
+      .then(() => this.client.query(
+        "SELECT id FROM users_schema.user_list WHERE login_id = $1 AND verify_guid = $2", //  FOR UPDATE OF users_schema.user_list
+        [parseInt(id) || 0, uid || null]
+      ))
       .then((res) => {
-        if (res.rowCount === 1 && res.rows[0][0] === uid) {
-          return this.client.query("UPDATE users_schema.login_info SET last_login = $1", [new Date()])
-            .then(() => this.client.query("COMMIT"))
+        if (res.rowCount === 1) {
+          // exact equality and only one, otherwise relogin
+          return this.client.query("UPDATE users_schema.user_list SET last_login = $1 WHERE id = $2", [new Date(), res.rows[0].id])
             .then(() => true);
         }
         return false;
       })
-      .catch(async (err) => {
-        await this.client.query("ROLLBACK");
-        console.error(err);
-        throw err;
-      })
-      .then(() => this.client.end());
+      .finally(() => this.client.end());
   }
 
   beginAuth(email) {
-    const guid = uuidv4();
-    this.client.connect()
-      .then(() => this.client.query("BEGIN"))
+    return this.client.connect()
       .then(() => this.client.query({
-        text: "SELECT li.id, u.id, u.random_password, u.password FROM users_schema.user as u LEFT JOIN users_schema.login_info as li ON u.id = li.user_id WHERE email = $1",
+        text: "SELECT id, random_password FROM users_schema.user_list WHERE email = $1",
         values: [email],
         rowMode: "array"
       }))
       .then((res) => {
-        if (res.rowCount) {
+        if (res.rowCount === 1) {
           const record = res.rows[0];
-          if (record[2]) { // random_password
-            const password = md5(salt + randomString({length: 12, special: true}));
-            return this.client.query("UPDATE users_schema.user SET password = $1", [password])
+          if (record[1]) { // random_password
+            const code = randomString({length: 12, special: true});
+            const hash = md5(databaseParams.salt + code);
+            return this.client.query("UPDATE users_schema.user_list SET password = $1 WHERE id = $2", [hash, record[0]])
               .then(() => ({
-                password: password,
-                loginId: record[0],
-                userId: record[1]
+                login: true,
+                password: false,
+                code: code
               }));
           }
           return {
-            password: record[3],
-            loginId: record[0],
-            userId: record[1]
+            login: true,
+            password: true,
+            code: null
           };
         }
-        const password = md5(salt + randomString({length: 12, special: true}));
-        return this.client.query("INSERT INTO users_schema.user (email, password, random_password) VALUES ($1, $2, $3) RETURNING id", [email, password, true])
+        return {
+          login: false,
+          password: true,
+          code: null
+        };
+      })
+      .finally(() => this.client.end());
+  }
+
+  login(email, password) {
+    const hash = md5(databaseParams.salt + password);
+    return this.client.connect()
+      .then(() => this.client.query("SELECT id FROM users_schema.user_list WHERE email = $1 AND password = $2", [email, hash]))
+      .then((res) => {
+        if (res.rowCount !== 1) {
+          return null;
+        }
+        const userId = res.rows[0].id;
+        const loginIdArray = new Int32Array(1);
+        crypto.randomFillSync(loginIdArray, 0, 1);
+        const guid = uuidv4();
+        return this.client.query(
+          "UPDATE users_schema.user_list SET verify_guid = $1, login_id = $2, last_login = $3 WHERE id = $4",
+          [guid, loginIdArray[0], new Date(), userId])
+          .then(() => ({
+            loginId: loginIdArray[0],
+            verifyGuid: guid
+          }));
+      })
+      .finally(() => this.client.end());
+  }
+
+  register(email, password, name, group, teacher, randomPassword) {
+    return this.client.connect()
+      .then(() => this.client.query("SELECT id FROM users_schema.user_list WHERE email = $1", [email]))
+      .then((res) => {
+        if (res.rowCount === 1) {
+          throw duplicateUserRegistrationError;
+        }
+        const loginIdArray = new Int32Array(1);
+        crypto.randomFillSync(loginIdArray, 0, 1);
+        const guid = uuidv4();
+        if (randomPassword) {
+          password = randomString({length: 12, special: true});
+        }
+        const hash = md5(databaseParams.salt + password);
+        return this.client.query("INSERT INTO users_schema.user_list (email, password, full_name, group_name, verify_guid, login_id, last_login, teacher, randomPassword) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
+          [email, hash, name, group, guid, loginIdArray[0], new Date(), !!teacher, !!randomPassword])
           .then((res) => {
             if (res.rowCount !== 1) {
-              throw new Error("Failed to create user, something went wrong.");
-            }
-            const id = res.rows[0].id;
-            return this.client.query("INSERT INTO users_schema.login_info (verify_guid, user_id, delete_user, last_login) VALUES ($1, $2, $3, $4) RETURNING id, user_id", [guid, id, true, new Date()]);
-          })
-          .then((res) => {
-            if (res.rowCount !== 1) {
-              throw new Error("Failed to create login info, something went wrong.");
+              return null;
             }
             return {
-              password: password,
-              loginId: res.rows[0].id,
-              userId: res.rows[0].user_id
-            }
+              loginId: loginIdArray[0],
+              verifyGuid: guid,
+              password: false,
+              code: password
+            };
           });
       })
+      .finally(() => this.client.end());
   }
 }
 

@@ -4,7 +4,7 @@ const express = require("express");
 const cookieParser = require('cookie-parser');
 const path = require("path");
 const bodyParser = require('body-parser');
-const {mailParams} = require("./mail-account");
+const {mailParams, localizedMessages, duplicateUserRegistrationError} = require("./params");
 const DataBaseClient = require("./database");
 const PORT = process.env.PORT || 5000;
 
@@ -30,41 +30,80 @@ function initWebServer() {
 
   app.use('/', express.static(path.join(__dirname, "dist")));
 
-  app.post('/api/login', async (req, res) => {
-    const db = DataBaseClient.create();
-    switch (req.body.stage) {
-      case "check":
-        try {
-          if (await db.checkLoginInfo(req.cookies.id, req.cookies.uid)) {
-            res.send({status: "auth"});
-          } else {
-            res.send({status: "fail", message: "Login required"});
-          }
-        } catch (e) {
-          res.status(500).send(e);
-        }
-        return;
-      case "email":
-        try {
-          if (validator.validate(req.body.email)) {
-            db.beginAuth(req.body.email);
-          } else {
-            res.send({status: "mailInvalid", message: "Mail is invalid"});
-          }
-        } catch (e) {
-          res.status(500).send(e);
-        }
-        break;
-      case "password":
-        break;
+  app.post('/api/check', async (req, res) => {
+    // check cookies if user is logged in
+    try {
+      const db = DataBaseClient.create();
+      if (await db.checkLoginInfo(req.cookies.id, req.cookies.uid)) {
+        res.send({status: "ok"});
+      } else {
+        res.send({status: "failed"});
+      }
+    } catch (e) {
+      res.status(500).send(e);
     }
-    console.log(req.query);
-    res.send("ok");
+  });
+  app.post('/api/auth', async (req, res) => {
+    // check if user exists to login or register
+    try {
+      if (validator.validate(req.body.email)) {
+        const db = DataBaseClient.create();
+        let result = await db.beginAuth(req.body.email);
+        res.send({status: "ok", login: result.login, password: result.password});
+        if (!result.password && result.code) {
+          // TODO send mail with password
+        }
+      } else {
+        res.send({status: "mailInvalid", message: localizedMessages.mailInvalid});
+      }
+    } catch (e) {
+      res.status(500).send(e);
+    }
+  });
+  app.post('/api/login', async (req, res) => {
+    try {
+      if (validator.validate(req.body.email)) {
+        const db = DataBaseClient.create();
+        let result = await db.login(req.body.email, req.body.password);
+        if (result) {
+          res.send({status: "ok", loginId: result.loginId, verifyGuid: result.verifyGuid});
+        } else {
+          res.send({status: "failed", loginId: null, verifyGuid: null});
+        }
+      } else {
+        res.send({status: "mailInvalid", message: localizedMessages.mailInvalid});
+      }
+    } catch (e) {
+      res.status(500).send(e);
+    }
+  });
+  app.post('/api/register', (req, res) => {
+    try {
+      if (validator.validate(req.body.email)) {
+        const db = DataBaseClient.create();
+        const result = db.register(req.body.email, req.body.password, req.body.name, req.body.group, req.body.teacher, req.body.randomPassword);
+        if (result) {
+          res.send({status: "ok", loginId: result.loginId, verifyGuid: result.verifyGuid});
+        } else {
+          res.send({status: "failed", loginId: null, verifyGuid: null});
+        }
+      } else {
+        res.send({status: "mailInvalid", message: localizedMessages.mailInvalid});
+      }
+    } catch (e) {
+      if (e === duplicateUserRegistrationError) {
+        res.send({status: "failed",  message: localizedMessages.duplicateUser});
+      } else {
+        res.stats(500).send(e);
+      }
+    }
   });
 
-  app.post('/api/register', (req, res) => {
-    if (validator.validate(req.body.email)) {
-      res.redirect('/register');
+  app.listen(PORT, () => console.log("started on port " + PORT));
+}
+
+/*
+res.redirect('/register');
       let transporter = nodemailer.createTransport({
         host: mailParams.host,
         port: mailParams.port,
@@ -92,10 +131,4 @@ function initWebServer() {
         console.log('Message sent: %s', info.messageId);
         console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
       });
-    } else {
-      res.send("failed");
-    }
-  });
-
-  app.listen(PORT, () => console.log("started on port " + PORT));
-}
+ */
