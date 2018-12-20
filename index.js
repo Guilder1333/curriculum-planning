@@ -1,10 +1,10 @@
-const nodemailer = require('nodemailer');
 const validator = require("email-validator");
 const express = require("express");
 const cookieParser = require('cookie-parser');
 const path = require("path");
 const bodyParser = require('body-parser');
-const {mailParams, localizedMessages, duplicateUserRegistrationError} = require("./params");
+const MailSender = require('./mailSender');
+const {localizedMessages, duplicateUserRegistrationError} = require("./params");
 const DataBaseClient = require("./database");
 const PORT = process.env.PORT || 5000;
 
@@ -34,11 +34,8 @@ function initWebServer() {
     // check cookies if user is logged in
     try {
       const db = DataBaseClient.create();
-      if (await db.checkLoginInfo(req.cookies.id, req.cookies.uid)) {
-        res.send({status: "ok"});
-      } else {
-        res.send({status: "failed"});
-      }
+      const result = await db.checkLoginInfo(req.cookies.id, req.cookies.uid);
+      res.send({status: result});
     } catch (e) {
       res.status(500).send(e);
     }
@@ -51,7 +48,7 @@ function initWebServer() {
         let result = await db.beginAuth(req.body.email);
         res.send({status: "ok", login: result.login, password: result.password});
         if (!result.password && result.code) {
-          // TODO send mail with password
+          new MailSender().sendPassword(req.body.email, result.code);
         }
       } else {
         res.send({status: "mailInvalid", message: localizedMessages.mailInvalid});
@@ -66,7 +63,7 @@ function initWebServer() {
         const db = DataBaseClient.create();
         let result = await db.login(req.body.email, req.body.password);
         if (result) {
-          res.send({status: "ok", loginId: result.loginId, verifyGuid: result.verifyGuid});
+          res.send({status: result.status, loginId: result.loginId, verifyGuid: result.verifyGuid});
         } else {
           res.send({status: "failed", loginId: null, verifyGuid: null});
         }
@@ -84,6 +81,7 @@ function initWebServer() {
         const result = db.register(req.body.email, req.body.password, req.body.name, req.body.group, req.body.teacher, req.body.randomPassword);
         if (result) {
           res.send({status: "ok", loginId: result.loginId, verifyGuid: result.verifyGuid});
+          new MailSender().sendConfirmation(req.body.email, result.confirmationHash);
         } else {
           res.send({status: "failed", loginId: null, verifyGuid: null});
         }
@@ -94,41 +92,20 @@ function initWebServer() {
       if (e === duplicateUserRegistrationError) {
         res.send({status: "failed",  message: localizedMessages.duplicateUser});
       } else {
-        res.stats(500).send(e);
+        res.status(500).send(e);
       }
     }
+  });
+  app.get('/api/confirm_registration', (req, res) => {
+    try {
+      const db = DataBaseClient.create();
+      const result = db.confirmRegistration(req.query.email, req.query.id);
+      res.send({status: result});
+    } catch (e) {
+      res.status(500).send(e);
+    }
+
   });
 
   app.listen(PORT, () => console.log("started on port " + PORT));
 }
-
-/*
-res.redirect('/register');
-      let transporter = nodemailer.createTransport({
-        host: mailParams.host,
-        port: mailParams.port,
-        secure: mailParams.secure,
-        auth: {
-          user: mailParams.user,
-          pass: mailParams.pass
-        }
-      });
-
-      // setup email data with unicode symbols
-      let mailOptions = {
-        from: '"Fred Foo 👻" <grani66@mail.ru>', // sender address
-        to: req.body.email, // list of receivers
-        subject: 'Hello ✔', // Subject line
-        text: 'Hello world! Your name is ' + req.body.name, // plain text body
-        html: '<b>Hello world?</b><br/>Your name is ' + req.body.name // html body
-      };
-
-      // send mail with defined transport object
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          return console.log(error);
-        }
-        console.log('Message sent: %s', info.messageId);
-        console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
-      });
- */

@@ -35,23 +35,26 @@ class DataBaseClient {
           }
         }
         return this.client.query("CREATE SCHEMA IF NOT EXISTS users_schema")
-          .then(() => this.client.query("CREATE TABLE IF NOT EXISTS users_schema.user_list (id serial primary key, email varchar(255) unique, password varchar(32), random_password boolean, teacher boolean, full_name varchar(255), group_name varchar(255), login_id int, verify_guid char(36), last_login timestamp with time zone)"));
+          .then(() => this.client.query("CREATE TABLE IF NOT EXISTS users_schema.user_list (id serial primary key, email varchar(255) unique, password varchar(32), random_password boolean, teacher boolean, full_name varchar(255), group_name varchar(255), login_id int, verify_guid char(36), confirmed boolean default false , last_login timestamp with time zone)"));
       });
   }
 
   checkLoginInfo(id, uid) {
     return this.client.connect()
       .then(() => this.client.query(
-        "SELECT id FROM users_schema.user_list WHERE login_id = $1 AND verify_guid = $2", //  FOR UPDATE OF users_schema.user_list
+        "SELECT id, confirmed FROM users_schema.user_list WHERE login_id = $1 AND verify_guid = $2", //  FOR UPDATE OF users_schema.user_list
         [parseInt(id) || 0, uid || null]
       ))
       .then((res) => {
         if (res.rowCount === 1) {
-          // exact equality and only one, otherwise relogin
-          return this.client.query("UPDATE users_schema.user_list SET last_login = $1 WHERE id = $2", [new Date(), res.rows[0].id])
-            .then(() => true);
+          if (res.rows[0].confirmed) {
+            // exact equality and only one, otherwise relogin
+            return this.client.query("UPDATE users_schema.user_list SET last_login = $1 WHERE id = $2", [new Date(), res.rows[0].id])
+              .then(() => "ok");
+          }
+          return "ok";
         }
-        return false;
+        return "failed";
       })
       .finally(() => this.client.end());
   }
@@ -94,10 +97,13 @@ class DataBaseClient {
   login(email, password) {
     const hash = md5(databaseParams.salt + password);
     return this.client.connect()
-      .then(() => this.client.query("SELECT id FROM users_schema.user_list WHERE email = $1 AND password = $2", [email, hash]))
+      .then(() => this.client.query("SELECT id, confirmed FROM users_schema.user_list WHERE email = $1 AND password = $2", [email, hash]))
       .then((res) => {
         if (res.rowCount !== 1) {
-          return null;
+          return {status: "fail"};
+        }
+        if (!res.rows[0].confirmed) {
+          return {status: "confirm"};
         }
         const userId = res.rows[0].id;
         const loginIdArray = new Int32Array(1);
@@ -107,6 +113,7 @@ class DataBaseClient {
           "UPDATE users_schema.user_list SET verify_guid = $1, login_id = $2, last_login = $3 WHERE id = $4",
           [guid, loginIdArray[0], new Date(), userId])
           .then(() => ({
+            status: "ok",
             loginId: loginIdArray[0],
             verifyGuid: guid
           }));
@@ -116,9 +123,10 @@ class DataBaseClient {
 
   register(email, password, name, group, teacher, randomPassword) {
     return this.client.connect()
-      .then(() => this.client.query("SELECT id FROM users_schema.user_list WHERE email = $1", [email]))
+      .then(() => this.client.query("SELECT id, confirmed FROM users_schema.user_list WHERE email = $1", [email]))
       .then((res) => {
-        if (res.rowCount === 1) {
+        if (res.rowCount === 1 && res.rows[0].confirmed) {
+          // user can re-register if user is not confirmed.
           throw duplicateUserRegistrationError;
         }
         const loginIdArray = new Int32Array(1);
@@ -134,13 +142,31 @@ class DataBaseClient {
             if (res.rowCount !== 1) {
               return null;
             }
+            const confirmationHash = md5(guid + databaseParams.confirmationSalt + res.rows[0].id + databaseParams.confirmationSalt);
             return {
               loginId: loginIdArray[0],
               verifyGuid: guid,
               password: false,
-              code: password
+              confirmationHash: confirmationHash
             };
           });
+      })
+      .finally(() => this.client.end());
+  }
+
+  confirmRegistration(email, id) {
+    return this.client.connect()
+      .then(() => this.client.query("SELECT id, verify_guid FROM users_schema.user_list WHERE email = $1", [email]))
+      .then((res) => {
+        if (res.rowCount === 1) {
+          const confirmationHash = md5(res.rows[0].verify_guid + databaseParams.confirmationSalt + res.rows[0].id + databaseParams.confirmationSalt);
+          if (id !== confirmationHash) {
+            return "failed";
+          }
+          return this.client.query("UPDATE users_schema.user_list SET last_login = $1, confirmed = $2 WHERE id = $3", [new Date(), true, res.rows[0].id])
+            .then(() => "ok");
+        }
+        return "outdated";
       })
       .finally(() => this.client.end());
   }
