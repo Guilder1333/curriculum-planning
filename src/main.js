@@ -12,7 +12,7 @@ class App extends React.Component {
   }
 
   componentDidMount() {
-    axios.post("/api/login", { stage: "check" }, { withCredentials: true }).then((r) => {
+    axios.post("/api/check", { withCredentials: true }).then((r) => {
       console.log(r.data);
       if (r.data.status === "auth") {
         this.setState({login: false, error: null});

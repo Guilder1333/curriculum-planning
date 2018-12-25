@@ -65,7 +65,7 @@ export default class ContentSwitcher extends React.Component {
 
   render() {
     return (
-      <div className="switcher">
+      <div className={"switcher" + (this.state.keyValue ? " selected-case-" + this.state.keyValue : "")}>
         <div className={this.state.transition} onTransitionEnd={this.transitionEndHandler}>
           {this.state.child}
           {this.state.transitionChild}
@@ -94,7 +94,7 @@ export class SwitchCase extends React.Component {
 
   render() {
     return (
-      <div className="switch-case">
+      <div className={"switch-case" + (this.props.switchKey ? " " + this.props.switchKey : "")}>
         {this.props.children}
       </div>
     );

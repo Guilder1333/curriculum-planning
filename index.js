@@ -33,6 +33,7 @@ function initWebServer() {
   app.post('/api/check', async (req, res) => {
     // check cookies if user is logged in
     try {
+      console.log(req.cookies);
       const db = DataBaseClient.create();
       const result = await db.checkLoginInfo(req.cookies.id, req.cookies.uid);
       res.send({status: result});
@@ -43,6 +44,7 @@ function initWebServer() {
   app.post('/api/auth', async (req, res) => {
     // check if user exists to login or register
     try {
+      console.log(req.body);
       if (validator.validate(req.body.email)) {
         const db = DataBaseClient.create();
         let result = await db.beginAuth(req.body.email);
@@ -59,6 +61,7 @@ function initWebServer() {
   });
   app.post('/api/login', async (req, res) => {
     try {
+      console.log(req.body);
       if (validator.validate(req.body.email)) {
         const db = DataBaseClient.create();
         let result = await db.login(req.body.email, req.body.password);
@@ -76,6 +79,7 @@ function initWebServer() {
   });
   app.post('/api/register', (req, res) => {
     try {
+      console.log(req.body);
       if (validator.validate(req.body.email)) {
         const db = DataBaseClient.create();
         const result = db.register(req.body.email, req.body.password, req.body.name, req.body.group, req.body.teacher, req.body.randomPassword);

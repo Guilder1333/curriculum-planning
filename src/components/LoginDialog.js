@@ -6,6 +6,7 @@ import axios from 'axios';
 import WaitPanel from "./WaitPanel";
 import ErrorPanel from "./ErrorPanel";
 import Window from "./Window";
+import RegisterPanel from "./RegisterPanel";
 
 export default class LoginDialog extends React.Component {
   constructor(props) {
@@ -13,39 +14,49 @@ export default class LoginDialog extends React.Component {
     this.buttonNext = React.createRef();
     this.buttonPrev = React.createRef();
     this.nextClick = this.nextClick.bind(this);
-    this.state = {keyValue: "auth", error: null};
+    this.state = {keyValue: "auth", error: null, email: ""};
     this.switcherRef = React.createRef();
     this.emailRef = React.createRef();
+    this.passMailRef = React.createRef();
+    this.passPasswordRef = React.createRef();
+    this.pmMailRef = React.createRef();
+    this.pmPasswordRef = React.createRef();
   }
 
   nextClick() {
-    axios.get("/api/auth", {
-      params: {
-        email: this.emailRef.current.value
-      }
-    }).then((r) => {
-      const data = r.data;
-      if (data.status === "mailInvalid") {
-        this.setState({error: "Email имеет некорректный формат."});
-        this.switcherRef.current.key = "auth";
-      } else if (data.status === "ok") {
-        if (data.login) {
-          if (data.password) {
-            this.switcherRef.current.key = "pass";
+    if (this.state.keyValue === "auth") {
+      this.setState({email: this.emailRef.current.value});
+      axios.post("/api/auth", {email: this.emailRef.current.value})
+        .then((r) => {
+          const data = r.data;
+          if (data.status === "mailInvalid") {
+            this.setState({error: "Email имеет некорректный формат."});
+            this.switcherRef.current.key = "auth";
+          } else if (data.status === "ok") {
+            if (data.login) {
+              if (data.password) {
+                this.switcherRef.current.key = "pass";
+              } else {
+                this.switcherRef.current.key = "pass_email";
+              }
+            } else {
+              this.switcherRef.current.key = "register";
+            }
           } else {
-            this.switcherRef.current.key = "pass_email";
+            this.setState({error: "Что-то пошло не так, попробуйте еще раз."});
+            this.switcherRef.current.key = "auth";
           }
-        } else {
-          this.switcherRef.current.key = "register";
-        }
-      } else {
-        this.setState({error: "Что-то пошло не так, попробуйте еще раз."});
-        this.switcherRef.current.key = "auth";
-      }
-    }).catch(function (e) {
-      console.error(e);
-    });
+        })
+        .catch((e) => {
+          this.showError(e);
+        });
+    }
     this.switcherRef.current.key = "wait";
+  }
+
+  showError(e) {
+    console.error(e);
+    this.setState({error: e});
   }
 
   render() {
@@ -63,20 +74,19 @@ export default class LoginDialog extends React.Component {
         </div>
         <ContentSwitcher ref={this.switcherRef} initialKey={this.state.keyValue} transition={true}>
           <SwitchCase switchKey="auth">
-            <CaptionInput ref={this.emailRef} caption="E-Mail" inputType="text" inputHint="Введите свой E-Mail" />
+            <CaptionInput ref={this.emailRef} caption="E-Mail" inputType="email" inputHint="Введите свой E-Mail" />
           </SwitchCase>
           <SwitchCase switchKey="pass">
-            <CaptionInput ref={this.passMailRef} caption="E-Mail" inputType="text" inputHint="Введите свой E-Mail" />
+            <CaptionInput ref={this.passMailRef} caption="E-Mail" inputType="email" inputHint="Введите свой E-Mail" />
             <CaptionInput ref={this.passPasswordRef} caption="Пароль" inputType="text" inputHint="Введите свой пароль" />
           </SwitchCase>
           <SwitchCase switchKey="pass_email">
-            <CaptionInput ref={this.pmMailRef} caption="E-Mail" inputType="text" inputHint="Введите свой E-Mail" />
+            <CaptionInput ref={this.pmMailRef} caption="E-Mail" inputType="email" inputHint="Введите свой E-Mail" />
             <div>Одноразовый пароль для входа отправлен на вашу почту.</div>
             <CaptionInput ref={this.pmPasswordRef} caption="Пароль" inputType="text" inputHint="Введите свой пароль" />
           </SwitchCase>
           <SwitchCase switchKey="register">
-            <CaptionInput ref={this.regMailRef} caption="E-Mail" inputType="text" inputHint="Введите свой E-Mail" />
-            <CaptionInput ref={this.regAuthTypeRef} caption="Вход по одноразовому паролю" inputType="checkbox" inputHint="" />
+            <RegisterPanel email={this.state.email}/>
           </SwitchCase>
           <SwitchCase switchKey="wait">
             <WaitPanel />

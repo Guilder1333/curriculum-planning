@@ -4,11 +4,8 @@
     min-width: 400px;
     min-height: 400px;
     max-height: 800px;
-    display: flex;
     border-radius: 10px;
     background: white;
-    flex-direction: column;
-    justify-content: space-between;
     position: relative;
 }
 
@@ -47,7 +44,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 30px;
 }
 
 .input_block--caption {
@@ -56,23 +52,34 @@
     color: #808080;
 }
 
-input.input_block--input {
+.input_block > input {
+    display: block;
+}
+
+.input_block > input::placeholder {
+    color: lightblue;
+}
+
+.input_block > input:focus {
+    outline: none;
+    border-color: #57b846;
+}
+
+.input_block--input, .input_block--email, .input_block--password {
+    height: 45px;
+    border: 0 solid #b2b2b2;
+    border-bottom-width: 1px;
+    padding: 0 5px;
     font-size: 15px;
     color: #555555;
     line-height: 1.2;
-    display: block;
     width: 100%;
     background: transparent;
-    padding: 0 5px;
     outline: none;
-    border: 0 solid #b2b2b2;
-    border-bottom-width: 1px;
-    height: 45px;
 }
 
-input.input_block--input:focus {
-    outline: none;
-    border-color: #57b846;
+.input_block.temporary-password-auth, .input_block.teacher-registration {
+    justify-content: space-between;
 }
 
 body,html {
@@ -119,10 +126,10 @@ button:hover {
 }
 
 .login_form--nav {
-    align-self: end;
-    flex: 0 0 auto;
-    display: flex;
+    position: absolute;
+    bottom: 0;
     width: 100%;
+    display: flex;
     flex-direction: row;
     justify-content: space-evenly;
     padding: 10px;
@@ -164,25 +171,21 @@ button:hover {
 
 .switcher {
     width: 100%;
-    height: 100%;
-    overflow: hidden;
     position: relative;
-    display: flex;
-    flex: 1 1 auto;
+    overflow: hidden;
+    padding-bottom: 70px;
 }
 
 .switch-case {
-    position: absolute;
+    position: relative;
     width: 100%;
-    height: 100%;
     left: 0;
     top: 0;
 }
 
 .switcher .transition {
-    position: absolute;
+    position: relative;
     width: 100%;
-    height: 100%;
     left: 0;
 }
 
@@ -200,10 +203,17 @@ button:hover {
 
 .switcher .transition.start .switch-case:first-child {
     left: 0;
+    float: left;
 }
 
 .switcher .transition.start .switch-case:last-child {
-    left: 50%;
+    left: 0;
+    float: right;
+}
+
+.switch-case {
+    padding: 30px;
+    box-sizing: border-box;
 }
 
 .wait-panel {
@@ -233,4 +243,14 @@ button:hover {
     display: flex;
     justify-content: center;
     flex-direction: column;
+}
+
+.register-panel .input_block--caption {
+    min-width: 46px;
+}
+
+.hint-small {
+    width: 100%;
+    font-size: 12px;
+    color: #b2b2b2;
 }
